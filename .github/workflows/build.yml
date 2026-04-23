@@ -1,40 +1,43 @@
-name: Build APK
+name: Ultimate APK Build
 on:
-  workflow_dispatch: # تشغيل يدوي بضغطة زر
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Install Node 18
         uses: actions/setup-node@v4
         with:
           node-version: 18
 
-      - name: Install dependencies
-        run: npm install --legacy-peer-deps
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
 
-      - name: Install EAS CLI
-        run: npm install -g eas-cli
-
-      - name: Create eas.json
+      - name: Force Install Dependencies
         run: |
-          echo '{
-            "build": {
-              "preview": {
-                "android": {
-                  "buildType": "apk"
-                }
-              }
-            }
-          }' > eas.json
+          npm install --legacy-peer-deps
+          npm install -g expo-cli
 
-      - name: Build APK (Internal)
-        # هنا تم وضع الـ Token مباشرة كما طلبت
-        run: npx eas-cli build -p android --profile preview --non-interactive
-        env:
-          EXPO_TOKEN: "Cp-Q7QC3wAojYlUxywhfKdxPsKX1UAW8-MSKTZwY"
+      - name: Create Android Folder (Prebuild)
+        # هذا الأمر سيجبر المشروع على التحول لأندرويد حتى لو وجد أخطاء
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Build APK with Gradle
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease --stacktrace
+
+      - name: Upload Final APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SportZone-Final-APK
+          path: android/app/build/outputs/apk/release/*.apk
           
