@@ -1,0 +1,29 @@
+name: Build APK
+on:
+  workflow_dispatch: # لتشغيل البناء يدوياً في أي وقت
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Build APK (Internal)
+        # هذا الأمر سيقوم بالبناء السحابي عبر Expo EAS
+        # ستحتاج لإضافة EXPO_TOKEN في الإعدادات إذا أردت الأمان التام
+        run: npx eas-cli build -p android --profile preview --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          
