@@ -1,6 +1,6 @@
 name: Build APK
 on:
-  workflow_dispatch: # لتشغيل البناء يدوياً في أي وقت
+  workflow_dispatch: # تشغيل يدوي بضغطة زر
 
 jobs:
   build:
@@ -20,10 +20,21 @@ jobs:
       - name: Install EAS CLI
         run: npm install -g eas-cli
 
+      - name: Create eas.json
+        run: |
+          echo '{
+            "build": {
+              "preview": {
+                "android": {
+                  "buildType": "apk"
+                }
+              }
+            }
+          }' > eas.json
+
       - name: Build APK (Internal)
-        # هذا الأمر سيقوم بالبناء السحابي عبر Expo EAS
-        # ستحتاج لإضافة EXPO_TOKEN في الإعدادات إذا أردت الأمان التام
+        # هنا تم وضع الـ Token مباشرة كما طلبت
         run: npx eas-cli build -p android --profile preview --non-interactive
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_TOKEN: "Cp-Q7QC3wAojYlUxywhfKdxPsKX1UAW8-MSKTZwY"
           
