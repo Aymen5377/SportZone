@@ -1,4 +1,4 @@
-name: Recovery Build
+name: Recovery Build V2
 on:
   workflow_dispatch:
 
@@ -18,20 +18,24 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Install & Fix Dependencies
+      - name: Install Dependencies
         run: |
           npm install --legacy-peer-deps
-          # تثبيت المكتبات التي تسببت في الخطأ الأخير يدوياً لضمان وجودها
-          npx expo install expo-web-browser expo-linking expo-constants
+          # تثبيت المكتبات المفقودة التي تسبب فشل الـ Bundle
+          npm install ajv ajv-keywords --save-dev
 
-      - name: Force Prebuild
+      - name: Prebuild
         run: npx expo prebuild --platform android --no-install
 
       - name: Build APK
         run: |
           cd android
+          # هذا السطر يحل مشكلة الـ Bundle عبر زيادة الذاكرة المتاحة لـ Node
+          export NODE_OPTIONS="--max-old-space-size=4096"
           chmod +x gradlew
           ./gradlew assembleRelease
+        env:
+          NODE_ENV: production
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
