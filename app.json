@@ -1,27 +1,42 @@
 {
   "expo": {
-    "name": "SportZone",
-    "slug": "sportzone",
+    "name": "onspace-app",
+    "slug": "onspace-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "sportzone",
+    "icon": "./assets/images/logo.png",
+    "scheme": "onspaceapp",
     "userInterfaceStyle": "automatic",
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.aymen5377.sportzone"
+      "supportsTablet": true
     },
     "android": {
-      "package": "com.aymen5377.sportzone"
+      "package": "com.aymen5377.sportzone",
+      "usesCleartextTraffic": true,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/logo.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true
     },
     "web": {
       "bundler": "metro",
-      "output": "static"
+      "output": "static",
+      "favicon": "./assets/images/logo.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/logo.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
