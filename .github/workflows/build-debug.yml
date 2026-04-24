@@ -18,7 +18,8 @@ jobs:
           rm -rf node_modules
           rm -rf android
           npm install --legacy-peer-deps
-          npx expo install expo-modules-core expo-linking expo-constants
+          # تثبيت المكتبات اللازمة لـ Expo Router ليعمل بشكل مستقل
+          npx expo install expo-router expo-constants expo-linking expo-modules-core
 
       - name: ☕ Setup Java
         uses: actions/setup-java@v4
@@ -28,40 +29,16 @@ jobs:
 
       - name: ⚙️ Prebuild (Generate Android Folder)
         run: |
+          # تنظيف app.json من أي plugins معطلة
           sed -i '/expo-web-browser/d' app.json || true
+          # توليد مجلد الأندرويد
           npx expo prebuild --platform android --no-install
 
-      - name: 👻 Inject Soul & Create Config
-        run: |
-          # إنشاء مجلدات الأصول
-          mkdir -p android/app/src/main/assets
-          
-          # إنشاء ملف metro.config.js مؤقت لإرضاء النظام
-          echo "const { getDefaultConfig } = require('@expo/metro-config');
-          module.exports = getDefaultConfig(__dirname);" > metro.config.js
-          
-          # تحديد ملف المدخل (index.js أو App.js)
-          ENTRY_FILE=$(node -e "const fs = require('fs'); console.log(fs.existsSync('index.js') ? 'index.js' : 'App.js')")
-          echo "Using entry file: $ENTRY_FILE"
-
-          # توليد الـ Bundle يدوياً مع الإعدادات الجديدة
-          npx react-native bundle \
-            --platform android \
-            --dev false \
-            --entry-file "$ENTRY_FILE" \
-            --bundle-output android/app/src/main/assets/index.android.bundle \
-            --assets-dest android/app/src/main/res/ \
-            --config metro.config.js
-
-      - name: 🛠 Build with Fix
+      - name: 🛠 Build APK with Embedded Soul
         run: |
           cd android
           chmod +x gradlew
+          # السر هنا: تشغيل المهام التي تدمج الكود (Bundle) وتجمع الـ APK في خطوة واحدة
+          # ستقوم هذه الخطوة بإنشاء الـ Bundle تلقائياً بدون البحث عن App.js يدوياً
           ./gradlew assembleDebug -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true --no-daemon
-
-      - name: 📥 Upload APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: SportZone-Stable-Bundle
-          path: android/app/build/outputs/apk/debug/app-debug.apk
           
