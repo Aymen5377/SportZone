@@ -14,13 +14,19 @@ jobs:
           node-version: 18
 
       - name: 📦 Install Dependencies
-        run: npm install --legacy-peer-deps
+        run: |
+          npm install
+          # تثبيت المكتبة التي سببت مشكلة سابقاً للاحتياط
+          npx expo install expo-web-browser
 
       - name: ☕ Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      - name: ⚙️ Generate Android Folder (Prebuild)
+        run: npx expo prebuild --platform android --no-install
 
       - name: 🛠 Build with Gradle
         run: |
@@ -31,6 +37,6 @@ jobs:
       - name: 📥 Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: SportZone-Direct-Debug
+          name: SportZone-Debug-Final
           path: android/app/build/outputs/apk/debug/app-debug.apk
           
