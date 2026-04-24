@@ -33,16 +33,17 @@ jobs:
 
       - name: 🔑 Create Temporary Signing Key
         run: |
-          # إنشاء مفتاح توقيع مؤقت للسماح بإنشاء نسخة Release
           cd android/app
-          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          # حذف أي مفتاح قديم إذا وجد لتجنب خطأ Alias already exists
+          rm -f debug.keystore
+          # إنشاء مفتاح جديد باسم فريد
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias sportzone_key -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=SportZone,O=App,C=US"
 
       - name: 🛠 Build Release APK (The Original Version)
         run: |
           cd android
           chmod +x gradlew
-          # أمر بناء نسخة الـ Release الأصلية
-          # هذه الخطوة ستقوم بدمج "الروح" تلقائياً وبقوة النظام
+          # بناء نسخة الـ Release
           ./gradlew assembleRelease -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true --no-daemon
 
       - name: 📥 Upload Original APK
