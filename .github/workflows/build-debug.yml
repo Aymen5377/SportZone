@@ -1,4 +1,4 @@
-name: Build Android Release (Ultra Validation)
+name: Build Android Release (Final Ultimate Shield)
 on: [push]
 
 jobs:
@@ -13,37 +13,42 @@ jobs:
         with:
           node-version: 18
 
-      - name: 🔍 [STAGE 1] Comprehensive Project Check
+      - name: 🛠️ [PHASE 1] Structural Integrity & Entry Point
         run: |
-          echo "Starting Comprehensive Validation..."
-          
-          # 1. فحص الملفات الأساسية
-          FILES=("package.json" "app.json")
-          for file in "${FILES[@]}"; do
-            if [ ! -f "$file" ]; then echo "❌ CRITICAL: $file missing!"; exit 1; fi
-          done
-
-          # 2. فحص مجلد app (مهم لـ Expo Router)
-          if [ ! -d "app" ]; then echo "❌ CRITICAL: 'app' directory not found! Expo Router needs it."; exit 1; fi
-
-          # 3. التأكد من ملف الدخول وصناعته إذا غاب
+          echo "Starting Structural Check..."
+          # تأمين ملف التشغيل (الروح)
           if [ ! -f "index.js" ] && [ ! -f "App.js" ]; then
             echo "import 'expo-router/entry';" > index.js
-            echo "✅ index.js created."
+            echo "✅ Created missing index.js"
           fi
-          
-          echo "✅ Stage 1 passed."
+          # التأكد من وجود مجلد app لـ Expo Router
+          if [ ! -d "app" ]; then
+            echo "❌ ERROR: 'app' folder is missing! Build cannot proceed."
+            exit 1
+          fi
 
-      - name: 📦 [STAGE 2] Dependency & Environment Setup
+      - name: 📦 [PHASE 2] Exhaustive Dependency Injection
         run: |
-          # مسح شامل للمخلفات
+          # تنظيف شامل
           rm -rf node_modules android
           
-          # تثبيت مع تحديد الذاكرة يدوياً في الأمر نفسه
-          NODE_OPTIONS="--max-old-space-size=4096" npm install --legacy-peer-deps
-          npx expo install expo-router expo-constants expo-linking expo-modules-core
+          # تثبيت المكتبات الأساسية
+          npm install --legacy-peer-deps
           
-          echo "✅ Stage 2 passed."
+          # تثبيت إجباري لكل المكتبات التي قد تسبب "شاشة حمراء" أو فشل تجميع
+          echo "Injecting all required libraries..."
+          npx expo install @shopify/flash-list \
+                           expo-router \
+                           expo-haptics \
+                           expo-constants \
+                           expo-linking \
+                           expo-modules-core \
+                           react-native-safe-area-context \
+                           react-native-screens \
+                           react-native-reanimated \
+                           react-native-gesture-handler \
+                           expo-status-bar \
+                           expo-font
 
       - name: ☕ Setup Java
         uses: actions/setup-java@v4
@@ -51,33 +56,31 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: ⚙️ [STAGE 3] Prebuild & Native Prep
+      - name: ⚙️ [PHASE 3] Native & Signing Guard
         run: |
-          # تنظيف ملف الإعدادات
+          # معالجة ملف الإعدادات
           sed -i '/expo-web-browser/d' app.json || true
           
           # توليد مجلد الأندرويد
           npx expo prebuild --platform android --no-install
           
-          # إعداد مسارات الأندرويد والذاكرة يدوياً
+          # تثبيت مسار النود وذاكرة البناء
           cd android
           echo "nodeExecutablePath=$(which node)" >> local.properties
           mkdir -p app/src/main/assets
           
-          # إنشاء مفتاح التوقيع في مكانه الصحيح
+          # إنشاء مفتاح التوقيع في مسار نظيف
           cd app
           rm -f debug.keystore
           keytool -genkey -v -keystore debug.keystore -storepass android -alias sportzone_key -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=SportZone,O=App,C=US"
-          
-          echo "✅ Stage 3 passed."
 
-      - name: 🛠 [STAGE 4] Final Heavy Build
+      - name: 🛠 [PHASE 4] The Heavy Build (Release APK)
         run: |
           cd android
           chmod +x gradlew
           ./gradlew clean
           
-          # تنفيذ البناء مع حقن الذاكرة مباشرة في محرك Gradle و Node
+          # تشغيل البناء النهائي مع أقصى طاقة ذاكرة ممكنة للسيرفر
           NODE_OPTIONS="--max-old-space-size=4096" ./gradlew assembleRelease \
             -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m" \
             -Pandroid.useAndroidX=true \
@@ -88,6 +91,6 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: SportZone-Ultimate-Release
+          name: SportZone-Stable-Original
           path: android/app/build/outputs/apk/release/app-release-unsigned.apk
           
