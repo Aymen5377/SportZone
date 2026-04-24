@@ -15,9 +15,9 @@ jobs:
 
       - name: 📦 Install Dependencies
         run: |
-          npm install
-          # تثبيت المكتبة التي سببت مشكلة سابقاً للاحتياط
-          npx expo install expo-web-browser
+          npm install --legacy-peer-deps
+          # إزالة المكتبة المسببة للمشاكل برمجياً لأننا لا نحتاجها للبث المباشر حالياً
+          npm uninstall expo-web-browser 
 
       - name: ☕ Setup Java
         uses: actions/setup-java@v4
@@ -25,18 +25,20 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: ⚙️ Generate Android Folder (Prebuild)
-        run: npx expo prebuild --platform android --no-install
+      - name: ⚙️ Force Generate Android Folder
+        run: |
+          # استخدام خيار --template لضمان وجود هيكل أندرويد سليم
+          npx expo prebuild --platform android --no-install --template blank
 
       - name: 🛠 Build with Gradle
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
 
       - name: 📥 Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: SportZone-Debug-Final
+          name: SportZone-Debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
           
