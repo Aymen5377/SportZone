@@ -1,4 +1,4 @@
-name: Build Android Release (Final Ultimate Shield)
+name: Build Android Release (The Final Stand)
 on: [push]
 
 jobs:
@@ -13,30 +13,17 @@ jobs:
         with:
           node-version: 18
 
-      - name: 🛠️ [PHASE 1] Structural Integrity & Entry Point
+      - name: 🛠️ [FORCE] Prepare Entry & Clean
         run: |
-          echo "Starting Structural Check..."
-          # تأمين ملف التشغيل (الروح)
+          rm -rf node_modules android
           if [ ! -f "index.js" ] && [ ! -f "App.js" ]; then
             echo "import 'expo-router/entry';" > index.js
-            echo "✅ Created missing index.js"
-          fi
-          # التأكد من وجود مجلد app لـ Expo Router
-          if [ ! -d "app" ]; then
-            echo "❌ ERROR: 'app' folder is missing! Build cannot proceed."
-            exit 1
           fi
 
-      - name: 📦 [PHASE 2] Exhaustive Dependency Injection
+      - name: 📦 [FORCE] Massive Dependency Install
         run: |
-          # تنظيف شامل
-          rm -rf node_modules android
-          
-          # تثبيت المكتبات الأساسية
           npm install --legacy-peer-deps
-          
-          # تثبيت إجباري لكل المكتبات التي قد تسبب "شاشة حمراء" أو فشل تجميع
-          echo "Injecting all required libraries..."
+          # تثبيت شامل لكل المكتبات التي ظهرت في أخطائك السابقة والمحتملة
           npx expo install @shopify/flash-list \
                            expo-router \
                            expo-haptics \
@@ -48,7 +35,9 @@ jobs:
                            react-native-reanimated \
                            react-native-gesture-handler \
                            expo-status-bar \
-                           expo-font
+                           expo-font \
+                           expo-localization \
+                           @react-native-community/netinfo
 
       - name: ☕ Setup Java
         uses: actions/setup-java@v4
@@ -56,41 +45,28 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: ⚙️ [PHASE 3] Native & Signing Guard
+      - name: ⚙️ Native Prebuild
         run: |
-          # معالجة ملف الإعدادات
           sed -i '/expo-web-browser/d' app.json || true
-          
-          # توليد مجلد الأندرويد
           npx expo prebuild --platform android --no-install
-          
-          # تثبيت مسار النود وذاكرة البناء
-          cd android
-          echo "nodeExecutablePath=$(which node)" >> local.properties
-          mkdir -p app/src/main/assets
-          
-          # إنشاء مفتاح التوقيع في مسار نظيف
-          cd app
-          rm -f debug.keystore
-          keytool -genkey -v -keystore debug.keystore -storepass android -alias sportzone_key -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=SportZone,O=App,C=US"
+          cd android && echo "nodeExecutablePath=$(which node)" >> local.properties
 
-      - name: 🛠 [PHASE 4] The Heavy Build (Release APK)
+      - name: 🛠 Build Release (With Debug Info)
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew clean
-          
-          # تشغيل البناء النهائي مع أقصى طاقة ذاكرة ممكنة للسيرفر
+          # أضفنا --stacktrace و --info لمعرفة السبب الحقيقي لو سقط البناء
           NODE_OPTIONS="--max-old-space-size=4096" ./gradlew assembleRelease \
-            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m" \
+            --stacktrace \
+            -Dorg.gradle.jvmargs="-Xmx4096m" \
             -Pandroid.useAndroidX=true \
             -Pandroid.enableJetifier=true \
             --no-daemon
 
-      - name: 📥 Upload Original APK
+      - name: 📥 Upload APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: SportZone-Stable-Original
+          name: SportZone-Ultimate-Release
           path: android/app/build/outputs/apk/release/app-release-unsigned.apk
           
