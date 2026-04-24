@@ -1,22 +1,55 @@
+name: Build Android Debug APK
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏗 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
       - name: 📦 Install & Fix Dependencies
         run: |
-          # حذف مجلد node_modules تماماً لضمان نظافة البيئة
+          # حذف المجلدات القديمة لضمان بيئة نظيفة تماماً
           rm -rf node_modules
-          # تثبيت المكتبات مع إجبار الإصدارات المتوافقة
-          npm install --legacy-peer-deps
-          # إضافة هذه المكتبة يدوياً لأنها هي من تسبب الخطأ المذكور
-          npx expo install expo-modules-core expo-linking
-
-      - name: ⚙️ Prebuild with Clean Slate
-        run: |
-          # إزالة أي ملفات أندرويد قديمة نتجت عن المحاولة الفاشلة
           rm -rf android
+          
+          # تثبيت المكتبات مع تجاهل تعارض النسخ
+          npm install --legacy-peer-deps
+          
+          # تثبيت المكتبات الأساسية التي سببت الخطأ الأخير لضمان تعريفها
+          npx expo install expo-modules-core expo-linking expo-constants
+
+      - name: ☕ Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: ⚙️ Prebuild (Generate Android Folder)
+        run: |
+          # حذف أي إشارات لمكتبة web-browser من app.json برمجياً لتجنب توقف البناء
+          sed -i '/expo-web-browser/d' app.json || true
+          
+          # توليد مجلد أندرويد خام ونظيف
           npx expo prebuild --platform android --no-install --template blank
 
-      - name: 🛠 Build with Fix
+      - name: 🛠 Build Debug APK
         run: |
           cd android
           chmod +x gradlew
-          # إضافة هذه الخاصية لتجاهل مشاكل التوافق في الـ Plugins
-          ./gradlew assembleDebug -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true
+          # استخدام خيارات التوافق القصوى لتجاوز أخطاء "unknown property release"
+          ./gradlew assembleDebug -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true --no-daemon
+
+      - name: 📥 Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SportZone-Final-Debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
           
