@@ -12,18 +12,17 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          cache: 'npm'
 
       - name: 📦 Install & Fix Dependencies
         run: |
-          # حذف المجلدات القديمة لضمان بيئة نظيفة تماماً
+          # حذف المجلدات لضمان بيئة نظيفة 100%
           rm -rf node_modules
           rm -rf android
           
           # تثبيت المكتبات مع تجاهل تعارض النسخ
           npm install --legacy-peer-deps
           
-          # تثبيت المكتبات الأساسية التي سببت الخطأ الأخير لضمان تعريفها
+          # تثبيت المكتبات التي تسبب مشاكل التوافق يدوياً
           npx expo install expo-modules-core expo-linking expo-constants
 
       - name: ☕ Setup Java
@@ -32,19 +31,20 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: ⚙️ Prebuild (Generate Android Folder)
+      - name: ⚙️ Prebuild with Clean Slate
         run: |
-          # حذف أي إشارات لمكتبة web-browser من app.json برمجياً لتجنب توقف البناء
+          # تنظيف إضافي قبل التوليد
+          rm -rf android
+          # حذف أي إشارة لـ web-browser لتجنب خطأ الـ Plugin
           sed -i '/expo-web-browser/d' app.json || true
-          
-          # توليد مجلد أندرويد خام ونظيف
+          # توليد المجلد باستخدام قالب نظيف
           npx expo prebuild --platform android --no-install --template blank
 
-      - name: 🛠 Build Debug APK
+      - name: 🛠 Build with Fix
         run: |
           cd android
           chmod +x gradlew
-          # استخدام خيارات التوافق القصوى لتجاوز أخطاء "unknown property release"
+          # تشغيل البناء مع تفعيل أدوات التوافق وتجاهل المشاكل التقنية الصغيرة
           ./gradlew assembleDebug -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true --no-daemon
 
       - name: 📥 Upload APK Artifact
