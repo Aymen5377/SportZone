@@ -1,4 +1,4 @@
-name: Build Android Release APK
+name: Build Android Release (Safe Mode)
 on: [push]
 
 jobs:
@@ -13,10 +13,19 @@ jobs:
         with:
           node-version: 18
 
+      - name: 🔍 [TEST 1] Validate Project Files
+        run: |
+          echo "Checking for essential files..."
+          if [ ! -f "package.json" ]; then echo "❌ package.json missing!"; exit 1; fi
+          if [ ! -f "app.json" ]; then echo "❌ app.json missing!"; exit 1; fi
+          # التحقق من وجود ملف الدخول (الروح)
+          ENTRY=$(node -e "const fs = require('fs'); console.log(fs.existsSync('index.js') ? 'index.js' : fs.existsSync('App.js') ? 'App.js' : 'none')")
+          if [ "$ENTRY" = "none" ]; then echo "❌ Entry file (index.js or App.js) not found!"; exit 1; fi
+          echo "✅ All core files present."
+
       - name: 📦 Install Dependencies
         run: |
-          rm -rf node_modules
-          rm -rf android
+          rm -rf node_modules android
           npm install --legacy-peer-deps
           npx expo install expo-router expo-constants expo-linking expo-modules-core
 
@@ -31,32 +40,35 @@ jobs:
           sed -i '/expo-web-browser/d' app.json || true
           npx expo prebuild --platform android --no-install
 
-      - name: 🚀 Optimize Memory & Paths
+      - name: 🚀 [TEST 2] Prepare Environment & Memory
         run: |
-          # زيادة ذاكرة Node.js لمنع فشل التجميع
-          export NODE_OPTIONS="--max-old-space-size=4096"
-          
-          # إخبار Gradle بمكان ملف الـ entry لضمان عدم ضياع "الروح"
+          # تخصيص ذاكرة ضخمة لـ Node و Gradle
+          echo "NODE_OPTIONS=--max-old-space-size=4096" >> $GITHUB_ENV
           cd android
           echo "nodeExecutablePath=$(which node)" >> local.properties
-          
-          # إنشاء مجلد الأصول يدوياً للتأكد
           mkdir -p app/src/main/assets
-
-      - name: 🔑 Create Temporary Signing Key
-        run: |
-          cd android/app
+          
+          # إنشاء مفتاح التوقيع مبكراً
+          cd app
           rm -f debug.keystore
           keytool -genkey -v -keystore debug.keystore -storepass android -alias sportzone_key -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=SportZone,O=App,C=US"
+          echo "✅ Environment ready."
 
-      - name: 🛠 Build Release APK (Final Fix)
+      - name: 🛠 Final Build (Release APK)
         run: |
           cd android
           chmod +x gradlew
-          # تشغيل البناء مع رفع كفاءة الذاكرة لـ Gradle أيضاً
-          ./gradlew assembleRelease -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m" -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true --no-daemon
+          # تنظيف الكاش قبل البدء لضمان بناء نظيف
+          ./gradlew clean
+          # تشغيل البناء النهائي
+          ./gradlew assembleRelease \
+            -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m" \
+            -Pandroid.useAndroidX=true \
+            -Pandroid.enableJetifier=true \
+            --no-daemon
 
       - name: 📥 Upload Original APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: SportZone-Final-Release
