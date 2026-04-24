@@ -1,49 +1,67 @@
-name: Robust Incremental Build
+name: Ultimate Fast Build (With Cache)
 on: [push]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: 🏗 Checkout Repository
+        uses: actions/checkout@v4
 
-      # 1. إعداد الجافا
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          java-version: '17'
-          distribution: 'zulu'
+          node-version: 18
 
-      # 2. ميزة الحفظ الذكي (The Magic Cache)
-      # هذا الجزء يبحث عن آخر "نسخة محفوظة" من البناء ويحملها
-      - name: Cache Gradle Wrapper & Dependencies
+      # 1️⃣ حفظ واسترجاع مكتبات npm (node_modules)
+      - name: 📦 Cache Node Modules
+        uses: actions/cache@v4
+        id: npm-cache
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: 📥 Install Dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: npm install --legacy-peer-deps
+
+      # 2️⃣ حفظ واسترجاع مجلد Android (بعد التوليد)
+      - name: 📂 Cache Android Folder
+        uses: actions/cache@v4
+        with:
+          path: android
+          key: ${{ runner.os }}-android-dir-${{ hashFiles('app.json', 'package-lock.json') }}
+
+      # 3️⃣ توليد مجلد Android إذا لم يكن موجوداً (Expo Prebuild)
+      - name: 🛠️ Generate Android Folder (if missing)
+        run: |
+          if [ ! -d "android" ]; then
+            echo "Generating android directory..."
+            npx expo prebuild --platform android --no-install
+          else
+            echo "Android directory found in cache, skipping generation."
+          fi
+
+      # 4️⃣ حفظ واسترجاع ملفات Gradle لسرعة البناء
+      - name: ⚡ Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-            android/app/build
-            android/.gradle
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
 
-      - name: Install Node Modules
-        run: npm install --legacy-peer-deps
-
-      # 3. تشغيل البناء مع أمر "الاستمرار"
-      - name: Build Android APK
+      - name: 🏗️ Build APK
         working-directory: android
         run: |
-          # نستخدم --build-cache لتفعيل التخزين الداخلي لـ Gradle
-          # ونستخدم خيارات الذاكرة التي اتفقنا عليها
+          chmod +x gradlew
           ./gradlew assembleRelease --build-cache \
           -Dorg.gradle.jvmargs="-Xmx3072m" \
           -Dorg.gradle.daemon=false
 
-      # 4. رفع الملف النهائي إذا نجح
-      - name: Upload APK
-        if: success()
+      - name: 📤 Upload Finished APK
         uses: actions/upload-artifact@v4
         with:
           name: SportZone-Final
