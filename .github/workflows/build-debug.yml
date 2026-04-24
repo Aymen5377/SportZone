@@ -1,4 +1,4 @@
-name: Finish Remaining Tasks Only
+name: Fix Expo Config & Build
 on: [push]
 
 jobs:
@@ -8,41 +8,43 @@ jobs:
       - name: 🏗 Checkout Repository
         uses: actions/checkout@v4
 
-      # 1. استرجاع المكتبات من الكاش (لن يحمل شيئاً من الإنترنت)
-      - name: 📦 Restore Node Modules
-        uses: actions/cache@v4
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          node-version: 18
 
-      # 2. استرجاع مجلد أندرويد (الـ 197 جزء المكتملة)
-      - name: 📂 Restore Android Folder & Gradle
+      # 1. استرجاع الكاش المتاح (مهما كان نوعه)
+      - name: 📦 Restore Any Cache
         uses: actions/cache@v4
-        id: android-cache
         with:
           path: |
+            node_modules
             android
             ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-android-gradle-final
+          key: ${{ runner.os }}-build-cache
 
-      # 3. التأكد من وجود المجلد (حل مشكلة No such file or directory)
-      - name: 🛠️ Repair Android Structure
+      # 2. تثبيت المكتبة المفقودة قسرياً (لحل ConfigError)
+      - name: 🛠️ Install Expo Core Only
         run: |
-          if [ ! -d "android" ]; then
-            echo "⚠️ المجلد مفقود من الكاش، جاري إعادة توليده سريعاً..."
-            npx expo prebuild --platform android --no-install
-          else
-            echo "✅ المجلد موجود، سنكمل من حيث توقفنا."
+          if [ ! -d "node_modules/expo" ]; then
+            echo "Expo module missing, installing core..."
+            npm install expo --no-save
           fi
 
-      # 4. تشغيل البناء للأجزاء المتبقية فقط وطباعة الخطأ
-      - name: 🏗️ Build Remaining (54 Tasks)
+      # 3. توليد المجلد المفقود (Prebuild)
+      - name: 📂 Generate Android Folder
+        run: |
+          if [ ! -d "android" ]; then
+            npx expo prebuild --platform android --no-install
+          fi
+
+      # 4. بناء الأجزاء المتبقية (الـ 54 خطوة)
+      - name: 🏗️ Build Remaining Tasks
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --build-cache \
-          --stacktrace --info \
+          --stacktrace \
           -Dorg.gradle.jvmargs="-Xmx3072m" \
           -x lint
           
