@@ -1,47 +1,41 @@
-name: List Cached Files & Tasks
+name: Export Files for Termux
 on: [push]
 
 jobs:
-  audit:
+  export:
     runs-on: ubuntu-latest
     steps:
       - name: 🏗️ Checkout
         uses: actions/checkout@v4
 
-      # 1. استرجاع الكاش المتاح لرؤية ما بداخله
-      - name: 📂 Restore Cache for Inspection
-        uses: actions/cache@v4
+      - name: 🟢 Setup Node
+        uses: actions/setup-node@v4
         with:
-          path: |
-            ~/.gradle/caches
-            android/app/build
-          key: ${{ runner.os }}-universal-cache- # استخدم نفس اسم الكاش السابق
+          node-version: 18
 
-      # 2. فحص الملفات المحفوظة وطباعة أسمائها
-      - name: 🔍 Audit Files & Remaining Tasks
+      - name: 📥 Install & Prebuild
         run: |
-          echo "=========================================="
-          echo "📂 قائمة المجلدات المحفوظة في الكاش حالياً:"
-          echo "=========================================="
-          if [ -d "android/app/build" ]; then
-            find android/app/build -maxdepth 2
-          else
-            echo "❌ مجلد Build غير موجود في الكاش!"
-          fi
+          npm install --legacy-peer-deps
+          npx expo prebuild --platform android --no-install
 
-          echo -e "\n=========================================="
-          echo "📑 المهام (Tasks) التي اكتملت وتم حفظها:"
-          echo "=========================================="
-          # فحص ملفات التقدم في Gradle
-          if [ -d "android/.gradle" ]; then
-            ls -R android/.gradle | grep "task" || echo "لا توجد مهام مسجلة بعد."
-          fi
+      - name: 🏗️ Attempt Build (Capture Progress)
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          # سنحاول البناء، وإذا فشل سنكمل للخطوة التالية (نستخدم || true)
+          ./gradlew assembleRelease --build-cache || true
 
-          echo -e "\n=========================================="
-          echo "🛠️ ما هي الملفات التي تحتاجها لـ Termux؟"
-          echo "=========================================="
-          echo "1. ملفات Java المترجمة: find android/app/build/intermediates/javac/release -name '*.class'"
-          echo "2. الموارد المدمجة: ls android/app/build/intermediates/res/merged/release"
+      # هذه هي الخطوة الأهم لك
+      - name: 📦 Zip Build Folder for Termux
+        if: always() # سيتم التنفيذ حتى لو فشل البناء أعلاه
+        run: |
+          echo "جاري ضغط الملفات المترجمة جزئياً..."
+          zip -r build_files.zip android/app/build android/.gradle
+
+      - name: 📤 Upload to GitHub Actions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Termux-Ready-Files
+          path: build_files.zip
           
-          echo -e "\n⚠️ تنبيه لـ Termux:"
-          echo "لتكملة العمل في ترمكس، ستحتاج لتحميل مجلد android/app/build بالكامل."
