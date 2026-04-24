@@ -16,8 +16,34 @@ jobs:
       - name: 📦 Install EAS CLI
         run: npm install -g eas-cli
 
-      - name: 🛠️ Create EAS Config File
+      - name: 🛠️ Auto-Generate Config Files
+        # سنقوم بإنشاء app.json و eas.json معاً لضمان عدم سؤال السيرفر عن أي شيء
         run: |
+          echo '{
+            "expo": {
+              "name": "SportZone",
+              "slug": "SportZone",
+              "version": "1.0.0",
+              "orientation": "portrait",
+              "icon": "./assets/icon.png",
+              "userInterfaceStyle": "light",
+              "assetBundlePatterns": ["**/*"],
+              "ios": { "supportsTablet": true },
+              "android": {
+                "adaptiveIcon": {
+                  "foregroundImage": "./assets/adaptive-icon.png",
+                  "backgroundColor": "#ffffff"
+                },
+                "package": "com.aymen8557.sportzone"
+              },
+              "extra": {
+                "eas": {
+                  "projectId": "8b5f3a1e-7f6c-4b5a-9d2e-1c8f5a3b2d1e" 
+                }
+              }
+            }
+          }' > app.json
+
           echo '{
             "build": {
               "preview": {
@@ -28,16 +54,11 @@ jobs:
             }
           }' > eas.json
 
-      - name: 🔗 Configure EAS Project (Auto-Init)
-        # هذا السطر سيقوم بربط المشروع بحسابك تلقائياً دون تدخل منك
-        run: npx eas-cli init --name SportZone --slug SportZone --non-interactive
-        env:
-          EXPO_TOKEN: "V8zgDeYnZ6nUPq2C14BzBTNZCesKRBVQBYit0HML"
-
       - name: 📦 Install Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: 🚀 Start EAS Build (APK Production)
+      - name: 🚀 Start EAS Build
+        # الآن سيعمل هذا الأمر مباشرة لأن الملفات جاهزة
         run: eas build --platform android --profile preview --non-interactive
         env:
           EXPO_TOKEN: "V8zgDeYnZ6nUPq2C14BzBTNZCesKRBVQBYit0HML"
