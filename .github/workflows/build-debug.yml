@@ -1,4 +1,4 @@
-name: Build Android Release (Final Force)
+name: Build Android Release (Ultra Validation)
 on: [push]
 
 jobs:
@@ -13,32 +13,37 @@ jobs:
         with:
           node-version: 18
 
-      - name: 🛠️ [STEP 1] Force Create Entry File
+      - name: 🔍 [STAGE 1] Comprehensive Project Check
         run: |
-          # محاولة إنشاء الملف أولاً لضمان وجود "الروح"
+          echo "Starting Comprehensive Validation..."
+          
+          # 1. فحص الملفات الأساسية
+          FILES=("package.json" "app.json")
+          for file in "${FILES[@]}"; do
+            if [ ! -f "$file" ]; then echo "❌ CRITICAL: $file missing!"; exit 1; fi
+          done
+
+          # 2. فحص مجلد app (مهم لـ Expo Router)
+          if [ ! -d "app" ]; then echo "❌ CRITICAL: 'app' directory not found! Expo Router needs it."; exit 1; fi
+
+          # 3. التأكد من ملف الدخول وصناعته إذا غاب
           if [ ! -f "index.js" ] && [ ! -f "App.js" ]; then
             echo "import 'expo-router/entry';" > index.js
-            echo "✅ index.js has been created."
-          else
-            echo "✅ Entry file already exists."
+            echo "✅ index.js created."
           fi
+          
+          echo "✅ Stage 1 passed."
 
-      - name: 🔍 [STEP 2] Immediate Validation
+      - name: 📦 [STAGE 2] Dependency & Environment Setup
         run: |
-          # الفحص بعد الإنشاء مباشرة
-          echo "Verifying entry file before proceeding..."
-          if [ -f "index.js" ] || [ -f "App.js" ]; then
-            echo "🚀 Success: Soul found! Proceeding to build."
-          else
-            echo "❌ Critical Error: Could not create or find entry file!"
-            exit 1
-          fi
-
-      - name: 📦 Install Dependencies
-        run: |
+          # مسح شامل للمخلفات
           rm -rf node_modules android
-          npm install --legacy-peer-deps
+          
+          # تثبيت مع تحديد الذاكرة يدوياً في الأمر نفسه
+          NODE_OPTIONS="--max-old-space-size=4096" npm install --legacy-peer-deps
           npx expo install expo-router expo-constants expo-linking expo-modules-core
+          
+          echo "✅ Stage 2 passed."
 
       - name: ☕ Setup Java
         uses: actions/setup-java@v4
@@ -46,28 +51,34 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: ⚙️ Prebuild
+      - name: ⚙️ [STAGE 3] Prebuild & Native Prep
         run: |
+          # تنظيف ملف الإعدادات
           sed -i '/expo-web-browser/d' app.json || true
+          
+          # توليد مجلد الأندرويد
           npx expo prebuild --platform android --no-install
-
-      - name: 🚀 Prepare Environment
-        run: |
-          echo "NODE_OPTIONS=--max-old-space-size=4096" >> $GITHUB_ENV
+          
+          # إعداد مسارات الأندرويد والذاكرة يدوياً
           cd android
           echo "nodeExecutablePath=$(which node)" >> local.properties
           mkdir -p app/src/main/assets
-          # إنشاء مفتاح التوقيع
+          
+          # إنشاء مفتاح التوقيع في مكانه الصحيح
           cd app
           rm -f debug.keystore
           keytool -genkey -v -keystore debug.keystore -storepass android -alias sportzone_key -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=SportZone,O=App,C=US"
+          
+          echo "✅ Stage 3 passed."
 
-      - name: 🛠 Final Build (Release APK)
+      - name: 🛠 [STAGE 4] Final Heavy Build
         run: |
           cd android
           chmod +x gradlew
           ./gradlew clean
-          ./gradlew assembleRelease \
+          
+          # تنفيذ البناء مع حقن الذاكرة مباشرة في محرك Gradle و Node
+          NODE_OPTIONS="--max-old-space-size=4096" ./gradlew assembleRelease \
             -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m" \
             -Pandroid.useAndroidX=true \
             -Pandroid.enableJetifier=true \
@@ -77,6 +88,6 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: SportZone-Final-Release
+          name: SportZone-Ultimate-Release
           path: android/app/build/outputs/apk/release/app-release-unsigned.apk
           
