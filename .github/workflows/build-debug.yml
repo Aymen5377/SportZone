@@ -1,4 +1,4 @@
-name: Build Android Debug APK
+name: Build Android Release APK
 on: [push]
 
 jobs:
@@ -13,12 +13,11 @@ jobs:
         with:
           node-version: 18
 
-      - name: 📦 Install & Fix Dependencies
+      - name: 📦 Install Dependencies
         run: |
           rm -rf node_modules
           rm -rf android
           npm install --legacy-peer-deps
-          # تثبيت المكتبات اللازمة لـ Expo Router ليعمل بشكل مستقل
           npx expo install expo-router expo-constants expo-linking expo-modules-core
 
       - name: ☕ Setup Java
@@ -27,18 +26,28 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: ⚙️ Prebuild (Generate Android Folder)
+      - name: ⚙️ Prebuild (Preparing Native Android)
         run: |
-          # تنظيف app.json من أي plugins معطلة
           sed -i '/expo-web-browser/d' app.json || true
-          # توليد مجلد الأندرويد
           npx expo prebuild --platform android --no-install
 
-      - name: 🛠 Build APK with Embedded Soul
+      - name: 🔑 Create Temporary Signing Key
+        run: |
+          # إنشاء مفتاح توقيع مؤقت للسماح بإنشاء نسخة Release
+          cd android/app
+          keytool -genkey -v -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: 🛠 Build Release APK (The Original Version)
         run: |
           cd android
           chmod +x gradlew
-          # السر هنا: تشغيل المهام التي تدمج الكود (Bundle) وتجمع الـ APK في خطوة واحدة
-          # ستقوم هذه الخطوة بإنشاء الـ Bundle تلقائياً بدون البحث عن App.js يدوياً
-          ./gradlew assembleDebug -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true --no-daemon
+          # أمر بناء نسخة الـ Release الأصلية
+          # هذه الخطوة ستقوم بدمج "الروح" تلقائياً وبقوة النظام
+          ./gradlew assembleRelease -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true --no-daemon
+
+      - name: 📥 Upload Original APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SportZone-Original-Release
+          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
           
