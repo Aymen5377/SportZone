@@ -16,34 +16,38 @@ jobs:
       - name: 📦 Install EAS CLI
         run: npm install -g eas-cli
 
-      - name: 🛠️ Comprehensive Environment Fixer
-        # هذا السكربت يفحص كل شيء: الملفات، الربط، والمعرفات ويصلحها فوراً
+      - name: 🛠️ Fixed Environment & Dependencies
         env:
           EXPO_TOKEN: "V8zgDeYnZ6nUPq2C14BzBTNZCesKRBVQBYit0HML"
         run: |
-          # 1. إنشاء ملف eas.json إذا كان مفقوداً
+          # 1. تثبيت إجباري للمكتبة التي تسببت في الخطأ
+          npm install expo-router @expo/config-plugins --legacy-peer-deps
+
+          # 2. إنشاء ملف app.json نظيف جداً يتجاوز خطأ Plugins
+          echo '{
+            "expo": {
+              "name": "SportZone",
+              "slug": "SportZone",
+              "version": "1.0.0",
+              "scheme": "sportzone",
+              "extra": {
+                "eas": {
+                  "projectId": "7c5e2a22-3837-4d08-8f81-5431616c6899"
+                }
+              },
+              "android": {
+                "package": "com.aymen8557.sportzone"
+              }
+            }
+          }' > app.json
+
+          # 3. إنشاء ملف eas.json للـ APK
           echo '{"build": {"preview": {"android": {"buildType": "apk"}}}}' > eas.json
-          
-          # 2. إنشاء app.json أساسي إذا لم يوجد
-          if [ ! -f app.json ]; then
-            echo '{"expo": {"name": "SportZone", "slug": "SportZone", "android": {"package": "com.aymen8557.sportzone"}}}' > app.json
-          fi
 
-          # 3. الحل السحري: ربط المشروع برمجياً واستخراج الـ ID
-          echo "🔍 جاري ربط المشروع بحساب Expo..."
-          npx eas-cli project:init --non-interactive || true
-          
-          # 4. التأكد من وجود projectId في app.json
-          if ! grep -q "projectId" app.json; then
-            echo "⚠️ المعرف مفقود، جاري الربط القسري..."
-            # هذا الأمر سيجبر Expo على توليد ID ووضعه في الملف
-            npx eas-cli build --platform android --profile preview --non-interactive --dry-run
-          fi
-
-      - name: 📦 Install Dependencies
+      - name: 📦 Install All Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: 🚀 Final Build Execution
+      - name: 🚀 Force EAS Build
         run: eas build --platform android --profile preview --non-interactive
         env:
           EXPO_TOKEN: "V8zgDeYnZ6nUPq2C14BzBTNZCesKRBVQBYit0HML"
