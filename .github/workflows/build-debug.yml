@@ -15,14 +15,9 @@ jobs:
 
       - name: 📦 Install & Fix Dependencies
         run: |
-          # حذف المجلدات لضمان بيئة نظيفة 100%
           rm -rf node_modules
           rm -rf android
-          
-          # تثبيت المكتبات مع تجاهل تعارض النسخ
           npm install --legacy-peer-deps
-          
-          # تثبيت المكتبات التي تسبب مشاكل التوافق يدوياً
           npx expo install expo-modules-core expo-linking expo-constants
 
       - name: ☕ Setup Java
@@ -31,25 +26,23 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: ⚙️ Prebuild with Clean Slate
+      - name: ⚙️ Prebuild (Generate Android Folder)
         run: |
-          # تنظيف إضافي قبل التوليد
-          rm -rf android
-          # حذف أي إشارة لـ web-browser لتجنب خطأ الـ Plugin
+          # حذف أي إشارة للمكتبة المسببة للمشاكل من app.json
           sed -i '/expo-web-browser/d' app.json || true
-          # توليد المجلد باستخدام قالب نظيف
-          npx expo prebuild --platform android --no-install --template blank
+          # استخدام الأمر الافتراضي بدون تحديد template خارجي لتجنب AssertionError
+          npx expo prebuild --platform android --no-install
 
       - name: 🛠 Build with Fix
         run: |
+          # التأكد من دخول المجلد بنجاح
           cd android
           chmod +x gradlew
-          # تشغيل البناء مع تفعيل أدوات التوافق وتجاهل المشاكل التقنية الصغيرة
           ./gradlew assembleDebug -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true --no-daemon
 
       - name: 📥 Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SportZone-Final-Debug
+          name: SportZone-Debug-Final
           path: android/app/build/outputs/apk/debug/app-debug.apk
           
