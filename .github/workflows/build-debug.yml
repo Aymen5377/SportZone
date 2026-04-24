@@ -17,7 +17,6 @@ jobs:
         run: npm install -g eas-cli
 
       - name: 🛠️ Create Base Config Files
-        # سننشئ ملفات أساسية بدون projectId لنترك لـ EAS مهمة توليده
         run: |
           echo '{
             "expo": {
@@ -43,9 +42,9 @@ jobs:
       - name: 📦 Install Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: 🚀 Start EAS Build (Auto-Link)
-        # هذا الأمر سيقوم بربط المشروع وبدء البناء في خطوة واحدة
-        run: eas build --platform android --profile preview --non-interactive --auto-dependency-resolution
+      - name: 🚀 Start EAS Build
+        # حذفنا --auto-dependency-resolution التي سببت المشكلة
+        run: eas build --platform android --profile preview --non-interactive
         env:
           EXPO_TOKEN: "V8zgDeYnZ6nUPq2C14BzBTNZCesKRBVQBYit0HML"
           
