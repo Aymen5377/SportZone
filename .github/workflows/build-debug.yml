@@ -16,8 +16,7 @@ jobs:
       - name: 📦 Install EAS CLI
         run: npm install -g eas-cli
 
-      - name: 🛠️ Create EAS Config File (Auto-Generate)
-        # هذا الجزء سيقوم بإنشاء ملف eas.json تلقائياً قبل بدء البناء لضمان إنتاج APK
+      - name: 🛠️ Create EAS Config File
         run: |
           echo '{
             "build": {
@@ -29,11 +28,16 @@ jobs:
             }
           }' > eas.json
 
+      - name: 🔗 Configure EAS Project (Auto-Init)
+        # هذا السطر سيقوم بربط المشروع بحسابك تلقائياً دون تدخل منك
+        run: npx eas-cli init --name SportZone --slug SportZone --non-interactive
+        env:
+          EXPO_TOKEN: "V8zgDeYnZ6nUPq2C14BzBTNZCesKRBVQBYit0HML"
+
       - name: 📦 Install Dependencies
         run: npm install --legacy-peer-deps
 
       - name: 🚀 Start EAS Build (APK Production)
-        # سيتم استخدام التوكن الخاص بك هنا مباشرة
         run: eas build --platform android --profile preview --non-interactive
         env:
           EXPO_TOKEN: "V8zgDeYnZ6nUPq2C14BzBTNZCesKRBVQBYit0HML"
