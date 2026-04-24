@@ -1,4 +1,4 @@
-name: Build Android Release (The Final Stand)
+name: Full Automated EAS Build
 on: [push]
 
 jobs:
@@ -13,60 +13,28 @@ jobs:
         with:
           node-version: 18
 
-      - name: 🛠️ [FORCE] Prepare Entry & Clean
+      - name: 📦 Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: 🛠️ Create EAS Config File (Auto-Generate)
+        # هذا الجزء سيقوم بإنشاء ملف eas.json تلقائياً قبل بدء البناء لضمان إنتاج APK
         run: |
-          rm -rf node_modules android
-          if [ ! -f "index.js" ] && [ ! -f "App.js" ]; then
-            echo "import 'expo-router/entry';" > index.js
-          fi
+          echo '{
+            "build": {
+              "preview": {
+                "android": {
+                  "buildType": "apk"
+                }
+              }
+            }
+          }' > eas.json
 
-      - name: 📦 [FORCE] Massive Dependency Install
-        run: |
-          npm install --legacy-peer-deps
-          # تثبيت شامل لكل المكتبات التي ظهرت في أخطائك السابقة والمحتملة
-          npx expo install @shopify/flash-list \
-                           expo-router \
-                           expo-haptics \
-                           expo-constants \
-                           expo-linking \
-                           expo-modules-core \
-                           react-native-safe-area-context \
-                           react-native-screens \
-                           react-native-reanimated \
-                           react-native-gesture-handler \
-                           expo-status-bar \
-                           expo-font \
-                           expo-localization \
-                           @react-native-community/netinfo
+      - name: 📦 Install Dependencies
+        run: npm install --legacy-peer-deps
 
-      - name: ☕ Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: ⚙️ Native Prebuild
-        run: |
-          sed -i '/expo-web-browser/d' app.json || true
-          npx expo prebuild --platform android --no-install
-          cd android && echo "nodeExecutablePath=$(which node)" >> local.properties
-
-      - name: 🛠 Build Release (With Debug Info)
-        run: |
-          cd android
-          chmod +x gradlew
-          # أضفنا --stacktrace و --info لمعرفة السبب الحقيقي لو سقط البناء
-          NODE_OPTIONS="--max-old-space-size=4096" ./gradlew assembleRelease \
-            --stacktrace \
-            -Dorg.gradle.jvmargs="-Xmx4096m" \
-            -Pandroid.useAndroidX=true \
-            -Pandroid.enableJetifier=true \
-            --no-daemon
-
-      - name: 📥 Upload APK
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: SportZone-Ultimate-Release
-          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+      - name: 🚀 Start EAS Build (APK Production)
+        # سيتم استخدام التوكن الخاص بك هنا مباشرة
+        run: eas build --platform android --profile preview --non-interactive
+        env:
+          EXPO_TOKEN: "V8zgDeYnZ6nUPq2C14BzBTNZCesKRBVQBYit0HML"
           
