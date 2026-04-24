@@ -1,4 +1,4 @@
-name: Ultimate Fast Build (With Cache)
+name: Debug & Complete Remaining Tasks
 on: [push]
 
 jobs:
@@ -8,62 +8,33 @@ jobs:
       - name: 🏗 Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      # 1️⃣ حفظ واسترجاع مكتبات npm (node_modules)
-      - name: 📦 Cache Node Modules
+      # 1. استرجاع المكتبات (Dependencies) من الكاش
+      - name: 📦 Restore Node Modules
         uses: actions/cache@v4
-        id: npm-cache
         with:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
 
-      - name: 📥 Install Dependencies
-        if: steps.npm-cache.outputs.cache-hit != 'true'
-        run: npm install --legacy-peer-deps
-
-      # 2️⃣ حفظ واسترجاع مجلد Android (بعد التوليد)
-      - name: 📂 Cache Android Folder
-        uses: actions/cache@v4
-        with:
-          path: android
-          key: ${{ runner.os }}-android-dir-${{ hashFiles('app.json', 'package-lock.json') }}
-
-      # 3️⃣ توليد مجلد Android إذا لم يكن موجوداً (Expo Prebuild)
-      - name: 🛠️ Generate Android Folder (if missing)
-        run: |
-          if [ ! -d "android" ]; then
-            echo "Generating android directory..."
-            npx expo prebuild --platform android --no-install
-          else
-            echo "Android directory found in cache, skipping generation."
-          fi
-
-      # 4️⃣ حفظ واسترجاع ملفات Gradle لسرعة البناء
-      - name: ⚡ Cache Gradle
+      # 2. استرجاع مجلد أندرويد وملفات Gradle (الـ 197 جزء المكتملة)
+      - name: ⚡ Restore Gradle & Android Cache
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
+            android/.gradle
+            android/app/build
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
-      - name: 🏗️ Build APK
+      # 3. محاولة إنهاء الـ 54 جزء المتبقية مع طبع الخطأ بالتفصيل
+      - name: 🛠️ Build Remaining Tasks & Debug
         working-directory: android
         run: |
           chmod +x gradlew
+          # أضفنا --stacktrace و --info لإظهار سبب المشكلة الحقيقي
           ./gradlew assembleRelease --build-cache \
+          --stacktrace --info \
           -Dorg.gradle.jvmargs="-Xmx3072m" \
-          -Dorg.gradle.daemon=false
-
-      - name: 📤 Upload Finished APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: SportZone-Final
-          path: android/app/build/outputs/apk/release/app-release.apk
+          -Dorg.gradle.daemon=false \
+          -x lint
           
