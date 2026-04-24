@@ -1,53 +1,51 @@
-name: Ultimate Auto-Fix & Build
+name: Robust Incremental Build
 on: [push]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 🏗 Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
+      # 1. إعداد الجافا
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
         with:
-          node-version: 18
+          java-version: '17'
+          distribution: 'zulu'
 
-      - name: 📦 Install EAS CLI
-        run: npm install -g eas-cli
+      # 2. ميزة الحفظ الذكي (The Magic Cache)
+      # هذا الجزء يبحث عن آخر "نسخة محفوظة" من البناء ويحملها
+      - name: Cache Gradle Wrapper & Dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/app/build
+            android/.gradle
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
 
-      - name: 🛠️ Fix Plugins & Config
-        run: |
-          # 1. تثبيت الإضافات التي تسببت في تعليق النظام
-          npm install expo-router @expo/config-plugins --legacy-peer-deps
-
-          # 2. إنشاء ملف app.json "خام" (بدون projectId) ليقوم النظام بإنشائه
-          echo '{
-            "expo": {
-              "name": "SportZone",
-              "slug": "SportZone",
-              "version": "1.0.0",
-              "scheme": "sportzone",
-              "android": {
-                "package": "com.aymen8557.sportzone"
-              }
-            }
-          }' > app.json
-
-          # 3. إنشاء ملف eas.json للـ APK
-          echo '{"build": {"preview": {"android": {"buildType": "apk"}}}}' > eas.json
-
-      - name: 🔗 Link Project to Account
-        # هذا الأمر هو الذي سيولد الـ ID الصحيح ويربطه بحسابك aymen8557
-        env:
-          EXPO_TOKEN: "V8zgDeYnZ6nUPq2C14BzBTNZCesKRBVQBYit0HML"
-        run: npx eas-cli project:init --non-interactive
-
-      - name: 📦 Install All Dependencies
+      - name: Install Node Modules
         run: npm install --legacy-peer-deps
 
-      - name: 🚀 Launch EAS Build
-        run: eas build --platform android --profile preview --non-interactive
-        env:
-          EXPO_TOKEN: "V8zgDeYnZ6nUPq2C14BzBTNZCesKRBVQBYit0HML"
+      # 3. تشغيل البناء مع أمر "الاستمرار"
+      - name: Build Android APK
+        working-directory: android
+        run: |
+          # نستخدم --build-cache لتفعيل التخزين الداخلي لـ Gradle
+          # ونستخدم خيارات الذاكرة التي اتفقنا عليها
+          ./gradlew assembleRelease --build-cache \
+          -Dorg.gradle.jvmargs="-Xmx3072m" \
+          -Dorg.gradle.daemon=false
+
+      # 4. رفع الملف النهائي إذا نجح
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SportZone-Final
+          path: android/app/build/outputs/apk/release/app-release.apk
           
