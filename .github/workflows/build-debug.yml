@@ -28,14 +28,18 @@ jobs:
 
       - name: ⚙️ Prebuild (Generate Android Folder)
         run: |
-          # حذف أي إشارة للمكتبة المسببة للمشاكل من app.json
           sed -i '/expo-web-browser/d' app.json || true
-          # استخدام الأمر الافتراضي بدون تحديد template خارجي لتجنب AssertionError
           npx expo prebuild --platform android --no-install
+
+      - name: 👻 Inject Soul (Generate Offline Bundle)
+        run: |
+          # إنشاء مجلد الأصول إذا لم يكن موجوداً
+          mkdir -p android/app/src/main/assets
+          # تحويل كود الجافا سكريبت إلى ملف bundle ووضعه داخل الأندرويد
+          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
 
       - name: 🛠 Build with Fix
         run: |
-          # التأكد من دخول المجلد بنجاح
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true --no-daemon
@@ -43,6 +47,6 @@ jobs:
       - name: 📥 Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SportZone-Debug-Final
+          name: SportZone-With-Soul
           path: android/app/build/outputs/apk/debug/app-debug.apk
           
