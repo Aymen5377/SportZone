@@ -16,25 +16,18 @@ jobs:
       - name: 📦 Install EAS CLI
         run: npm install -g eas-cli
 
-      - name: 🛠️ Fixed Environment & Dependencies
-        env:
-          EXPO_TOKEN: "V8zgDeYnZ6nUPq2C14BzBTNZCesKRBVQBYit0HML"
+      - name: 🛠️ Fix Plugins & Config
         run: |
-          # 1. تثبيت إجباري للمكتبة التي تسببت في الخطأ
+          # 1. تثبيت الإضافات التي تسببت في تعليق النظام
           npm install expo-router @expo/config-plugins --legacy-peer-deps
 
-          # 2. إنشاء ملف app.json نظيف جداً يتجاوز خطأ Plugins
+          # 2. إنشاء ملف app.json "خام" (بدون projectId) ليقوم النظام بإنشائه
           echo '{
             "expo": {
               "name": "SportZone",
               "slug": "SportZone",
               "version": "1.0.0",
               "scheme": "sportzone",
-              "extra": {
-                "eas": {
-                  "projectId": "7c5e2a22-3837-4d08-8f81-5431616c6899"
-                }
-              },
               "android": {
                 "package": "com.aymen8557.sportzone"
               }
@@ -44,10 +37,16 @@ jobs:
           # 3. إنشاء ملف eas.json للـ APK
           echo '{"build": {"preview": {"android": {"buildType": "apk"}}}}' > eas.json
 
+      - name: 🔗 Link Project to Account
+        # هذا الأمر هو الذي سيولد الـ ID الصحيح ويربطه بحسابك aymen8557
+        env:
+          EXPO_TOKEN: "V8zgDeYnZ6nUPq2C14BzBTNZCesKRBVQBYit0HML"
+        run: npx eas-cli project:init --non-interactive
+
       - name: 📦 Install All Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: 🚀 Force EAS Build
+      - name: 🚀 Launch EAS Build
         run: eas build --platform android --profile preview --non-interactive
         env:
           EXPO_TOKEN: "V8zgDeYnZ6nUPq2C14BzBTNZCesKRBVQBYit0HML"
