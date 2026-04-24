@@ -16,30 +16,16 @@ jobs:
       - name: 📦 Install EAS CLI
         run: npm install -g eas-cli
 
-      - name: 🛠️ Auto-Generate Config Files
-        # سنقوم بإنشاء app.json و eas.json معاً لضمان عدم سؤال السيرفر عن أي شيء
+      - name: 🛠️ Create Base Config Files
+        # سننشئ ملفات أساسية بدون projectId لنترك لـ EAS مهمة توليده
         run: |
           echo '{
             "expo": {
               "name": "SportZone",
               "slug": "SportZone",
               "version": "1.0.0",
-              "orientation": "portrait",
-              "icon": "./assets/icon.png",
-              "userInterfaceStyle": "light",
-              "assetBundlePatterns": ["**/*"],
-              "ios": { "supportsTablet": true },
               "android": {
-                "adaptiveIcon": {
-                  "foregroundImage": "./assets/adaptive-icon.png",
-                  "backgroundColor": "#ffffff"
-                },
                 "package": "com.aymen8557.sportzone"
-              },
-              "extra": {
-                "eas": {
-                  "projectId": "8b5f3a1e-7f6c-4b5a-9d2e-1c8f5a3b2d1e" 
-                }
               }
             }
           }' > app.json
@@ -57,9 +43,9 @@ jobs:
       - name: 📦 Install Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: 🚀 Start EAS Build
-        # الآن سيعمل هذا الأمر مباشرة لأن الملفات جاهزة
-        run: eas build --platform android --profile preview --non-interactive
+      - name: 🚀 Start EAS Build (Auto-Link)
+        # هذا الأمر سيقوم بربط المشروع وبدء البناء في خطوة واحدة
+        run: eas build --platform android --profile preview --non-interactive --auto-dependency-resolution
         env:
           EXPO_TOKEN: "V8zgDeYnZ6nUPq2C14BzBTNZCesKRBVQBYit0HML"
           
