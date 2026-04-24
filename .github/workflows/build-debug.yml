@@ -13,11 +13,13 @@ jobs:
         with:
           node-version: 18
 
-      - name: 📦 Install Dependencies
+      - name: 🧹 Clean Config & Install
         run: |
+          # حذف المكتبة من ملف package.json
+          npm uninstall expo-web-browser
+          # حركة ذكية: حذف أي إشارة للمكتبة من ملف app.json برمجياً لتجنب خطأ الـ Plugin
+          sed -i '/expo-web-browser/d' app.json || true
           npm install --legacy-peer-deps
-          # إزالة المكتبة المسببة للمشاكل برمجياً لأننا لا نحتاجها للبث المباشر حالياً
-          npm uninstall expo-web-browser 
 
       - name: ☕ Setup Java
         uses: actions/setup-java@v4
@@ -25,20 +27,20 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: ⚙️ Force Generate Android Folder
+      - name: ⚙️ Generate Android Folder
         run: |
-          # استخدام خيار --template لضمان وجود هيكل أندرويد سليم
+          # استخدام --no-install لتسريع العملية وتجنب فحص الموديولات المفقودة
           npx expo prebuild --platform android --no-install --template blank
 
-      - name: 🛠 Build with Gradle
+      - name: 🛠 Build Debug APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --no-daemon
 
       - name: 📥 Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: SportZone-Debug
+          name: SportZone-Debug-Success
           path: android/app/build/outputs/apk/debug/app-debug.apk
           
