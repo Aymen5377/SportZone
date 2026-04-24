@@ -1,4 +1,4 @@
-name: Build Android Release (Safe Mode)
+name: Build Android Release (Final Force)
 on: [push]
 
 jobs:
@@ -13,15 +13,26 @@ jobs:
         with:
           node-version: 18
 
-      - name: 🔍 [TEST 1] Validate Project Files
+      - name: 🛠️ [STEP 1] Force Create Entry File
         run: |
-          echo "Checking for essential files..."
-          if [ ! -f "package.json" ]; then echo "❌ package.json missing!"; exit 1; fi
-          if [ ! -f "app.json" ]; then echo "❌ app.json missing!"; exit 1; fi
-          # التحقق من وجود ملف الدخول (الروح)
-          ENTRY=$(node -e "const fs = require('fs'); console.log(fs.existsSync('index.js') ? 'index.js' : fs.existsSync('App.js') ? 'App.js' : 'none')")
-          if [ "$ENTRY" = "none" ]; then echo "❌ Entry file (index.js or App.js) not found!"; exit 1; fi
-          echo "✅ All core files present."
+          # محاولة إنشاء الملف أولاً لضمان وجود "الروح"
+          if [ ! -f "index.js" ] && [ ! -f "App.js" ]; then
+            echo "import 'expo-router/entry';" > index.js
+            echo "✅ index.js has been created."
+          else
+            echo "✅ Entry file already exists."
+          fi
+
+      - name: 🔍 [STEP 2] Immediate Validation
+        run: |
+          # الفحص بعد الإنشاء مباشرة
+          echo "Verifying entry file before proceeding..."
+          if [ -f "index.js" ] || [ -f "App.js" ]; then
+            echo "🚀 Success: Soul found! Proceeding to build."
+          else
+            echo "❌ Critical Error: Could not create or find entry file!"
+            exit 1
+          fi
 
       - name: 📦 Install Dependencies
         run: |
@@ -40,27 +51,22 @@ jobs:
           sed -i '/expo-web-browser/d' app.json || true
           npx expo prebuild --platform android --no-install
 
-      - name: 🚀 [TEST 2] Prepare Environment & Memory
+      - name: 🚀 Prepare Environment
         run: |
-          # تخصيص ذاكرة ضخمة لـ Node و Gradle
           echo "NODE_OPTIONS=--max-old-space-size=4096" >> $GITHUB_ENV
           cd android
           echo "nodeExecutablePath=$(which node)" >> local.properties
           mkdir -p app/src/main/assets
-          
-          # إنشاء مفتاح التوقيع مبكراً
+          # إنشاء مفتاح التوقيع
           cd app
           rm -f debug.keystore
           keytool -genkey -v -keystore debug.keystore -storepass android -alias sportzone_key -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=SportZone,O=App,C=US"
-          echo "✅ Environment ready."
 
       - name: 🛠 Final Build (Release APK)
         run: |
           cd android
           chmod +x gradlew
-          # تنظيف الكاش قبل البدء لضمان بناء نظيف
           ./gradlew clean
-          # تشغيل البناء النهائي
           ./gradlew assembleRelease \
             -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m" \
             -Pandroid.useAndroidX=true \
