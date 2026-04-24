@@ -1,61 +1,47 @@
-name: Build Remaining 54 Tasks Only
+name: List Cached Files & Tasks
 on: [push]
 
 jobs:
-  build:
+  audit:
     runs-on: ubuntu-latest
     steps:
-      - name: 🏗️ Checkout Project
+      - name: 🏗️ Checkout
         uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 18
-
-      # 1. استرجاع "نخاع" المشروع فقط (الملفات التي نجحت سابقاً)
-      - name: 📂 Restore Previous Success
+      # 1. استرجاع الكاش المتاح لرؤية ما بداخله
+      - name: 📂 Restore Cache for Inspection
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
-            ~/.gradle/wrapper
-            android/.gradle
             android/app/build
-          key: ${{ runner.os }}-gradle-checkpoint
+          key: ${{ runner.os }}-universal-cache- # استخدم نفس اسم الكاش السابق
 
-      # 2. بناء الهيكل المفقود بسرعة (بدون تحميل مكتبات كاملة)
-      - name: 🛠️ Quick Structure Fix
+      # 2. فحص الملفات المحفوظة وطباعة أسمائها
+      - name: 🔍 Audit Files & Remaining Tasks
         run: |
-          npm install expo --no-save
-          if [ ! -d "android" ]; then
-            npx expo prebuild --platform android --no-install
+          echo "=========================================="
+          echo "📂 قائمة المجلدات المحفوظة في الكاش حالياً:"
+          echo "=========================================="
+          if [ -d "android/app/build" ]; then
+            find android/app/build -maxdepth 2
+          else
+            echo "❌ مجلد Build غير موجود في الكاش!"
           fi
 
-      # 3. المستحيل: إجبار Gradle على إكمال الـ 54 مهمة فقط
-      - name: 🏗️ Force Build Remaining Tasks
-        working-directory: android
-        run: |
-          chmod +x gradlew
-          
-          # الأمر السحري: --continue يجعله يتخطى الناجح ويركز على الفاشل
-          # و -x lint لتوفير الوقت وتجنب أخطاء الفحص
-          ./gradlew assembleRelease \
-          --build-cache \
-          --continue \
-          --parallel \
-          -Dorg.gradle.jvmargs="-Xmx3072m" \
-          -Dorg.gradle.daemon=false \
-          -x lint \
-          -x test
+          echo -e "\n=========================================="
+          echo "📑 المهام (Tasks) التي اكتملت وتم حفظها:"
+          echo "=========================================="
+          # فحص ملفات التقدم في Gradle
+          if [ -d "android/.gradle" ]; then
+            ls -R android/.gradle | grep "task" || echo "لا توجد مهام مسجلة بعد."
+          fi
 
-      # 4. حفظ النتيجة فوراً (سواء نجح الكل أو جزء)
-      - name: 💾 Save Progress
-        if: always()
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            android/app/build
-          key: ${{ runner.os }}-gradle-checkpoint-${{ github.run_number }}
+          echo -e "\n=========================================="
+          echo "🛠️ ما هي الملفات التي تحتاجها لـ Termux؟"
+          echo "=========================================="
+          echo "1. ملفات Java المترجمة: find android/app/build/intermediates/javac/release -name '*.class'"
+          echo "2. الموارد المدمجة: ls android/app/build/intermediates/res/merged/release"
           
+          echo -e "\n⚠️ تنبيه لـ Termux:"
+          echo "لتكملة العمل في ترمكس، ستحتاج لتحميل مجلد android/app/build بالكامل."
