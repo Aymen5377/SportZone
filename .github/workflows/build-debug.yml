@@ -5,42 +5,27 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 🏗 Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: 🟢 Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 18
-
-      - name: 🧹 Clean Config & Install
+      - name: 📦 Install
         run: |
-          # حذف المكتبة من ملف package.json
-          npm uninstall expo-web-browser
-          # حركة ذكية: حذف أي إشارة للمكتبة من ملف app.json برمجياً لتجنب خطأ الـ Plugin
-          sed -i '/expo-web-browser/d' app.json || true
           npm install --legacy-peer-deps
-
-      - name: ☕ Setup Java
-        uses: actions/setup-java@v4
+          npm uninstall expo-web-browser # لضمان حذف أي أثر لها
+      - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
-
-      - name: ⚙️ Generate Android Folder
-        run: |
-          # استخدام --no-install لتسريع العملية وتجنب فحص الموديولات المفقودة
-          npx expo prebuild --platform android --no-install --template blank
-
-      - name: 🛠 Build Debug APK
+      - name: ⚙️ Prebuild
+        run: npx expo prebuild --platform android --no-install
+      - name: 🛠 Build
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-
-      - name: 📥 Upload APK
-        uses: actions/upload-artifact@v4
+          ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
         with:
-          name: SportZone-Debug-Success
+          name: SportZone-Debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
           
