@@ -1,41 +1,14 @@
-name: Export Files for Termux
-on: [push]
+name: Connect GitHub Action to Termux
+on: workflow_dispatch # لتشغيله يدوياً متى شئت
 
 jobs:
-  export:
+  connect:
     runs-on: ubuntu-latest
     steps:
-      - name: 🏗️ Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: 🟢 Setup Node
-        uses: actions/setup-node@v4
+      - name: Setup Tmate Session
+        uses: mxschmitt/action-tmate@v3
         with:
-          node-version: 18
-
-      - name: 📥 Install & Prebuild
-        run: |
-          npm install --legacy-peer-deps
-          npx expo prebuild --platform android --no-install
-
-      - name: 🏗️ Attempt Build (Capture Progress)
-        working-directory: android
-        run: |
-          chmod +x gradlew
-          # سنحاول البناء، وإذا فشل سنكمل للخطوة التالية (نستخدم || true)
-          ./gradlew assembleRelease --build-cache || true
-
-      # هذه هي الخطوة الأهم لك
-      - name: 📦 Zip Build Folder for Termux
-        if: always() # سيتم التنفيذ حتى لو فشل البناء أعلاه
-        run: |
-          echo "جاري ضغط الملفات المترجمة جزئياً..."
-          zip -r build_files.zip android/app/build android/.gradle
-
-      - name: 📤 Upload to GitHub Actions
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Termux-Ready-Files
-          path: build_files.zip
+          limit-access-to-actor: false # لسهولة الدخول من الهاتف
           
