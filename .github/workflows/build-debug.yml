@@ -1,11 +1,11 @@
-name: Fix Expo Config & Build
+name: Complete Remaining 54 Tasks
 on: [push]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: 🏗 Checkout Repository
+      - name: 🏗️ Checkout Project
         uses: actions/checkout@v4
 
       - name: 🟢 Setup Node.js
@@ -13,38 +13,54 @@ jobs:
         with:
           node-version: 18
 
-      # 1. استرجاع الكاش المتاح (مهما كان نوعه)
-      - name: 📦 Restore Any Cache
+      # 1️⃣ استرجاع "الخزنة" التي تحتوي على الـ 197 جزء المكتملة
+      - name: 📂 Universal Cache Restore
         uses: actions/cache@v4
         with:
           path: |
             node_modules
             android
             ~/.gradle/caches
-          key: ${{ runner.os }}-build-cache
+            ~/.gradle/wrapper
+          # نستخدم نفس المفتاح لضمان العودة لنفس نقطة الحفظ
+          key: ${{ runner.os }}-universal-cache-${{ hashFiles('**/package-lock.json', 'app.json') }}
+          restore-keys: |
+            ${{ runner.os }}-universal-cache-
 
-      # 2. تثبيت المكتبة المفقودة قسرياً (لحل ConfigError)
-      - name: 🛠️ Install Expo Core Only
+      # 2️⃣ التأكد من سلامة البيئة دون تحميل خارجي
+      - name: 🛠️ Environment Ready Check
         run: |
           if [ ! -d "node_modules/expo" ]; then
-            echo "Expo module missing, installing core..."
             npm install expo --no-save
           fi
-
-      # 3. توليد المجلد المفقود (Prebuild)
-      - name: 📂 Generate Android Folder
-        run: |
           if [ ! -d "android" ]; then
             npx expo prebuild --platform android --no-install
           fi
 
-      # 4. بناء الأجزاء المتبقية (الـ 54 خطوة)
-      - name: 🏗️ Build Remaining Tasks
+      # 3️⃣ استكمال الـ 54 مهمة المتبقية مع طباعة الخطأ فوراً
+      - name: 🏗️ Finish Remaining Tasks
         working-directory: android
         run: |
           chmod +x gradlew
+          
+          echo "⏳ يستكمل الآن من حيث توقف (المهام المتبقية)..."
+          
+          # استخدام --build-cache لإخبار Gradle باستخدام الـ 197 جزءاً المحفوظة
           ./gradlew assembleRelease --build-cache \
-          --stacktrace \
+          --continue \
           -Dorg.gradle.jvmargs="-Xmx3072m" \
-          -x lint
+          -Dorg.gradle.daemon=false \
+          || { 
+               echo "❌❌ توقف البناء! إليك سبب المشكلة في الأجزاء المتبقية: ❌❌";
+               ./gradlew assembleRelease --info | grep -E "error|FAILED" -A 3; 
+               exit 1; 
+             }
+
+      # 4️⃣ استخراج الـ APK فور النجاح
+      - name: 📤 Upload SportZone APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SportZone-Final-Build
+          path: android/app/build/outputs/apk/release/*.apk
           
