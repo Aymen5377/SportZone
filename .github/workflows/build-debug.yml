@@ -15,9 +15,12 @@ jobs:
 
       - name: 📦 Install & Fix Dependencies
         run: |
+          # تنظيف البيئة لضمان عدم وجود ملفات معطوبة
           rm -rf node_modules
           rm -rf android
+          # تثبيت المكتبات مع تجاهل التعارضات
           npm install --legacy-peer-deps
+          # تثبيت مكتبات الجسر الأساسية يدوياً
           npx expo install expo-modules-core expo-linking expo-constants
 
       - name: ☕ Setup Java
@@ -28,25 +31,29 @@ jobs:
 
       - name: ⚙️ Prebuild (Generate Android Folder)
         run: |
+          # حذف أي إضافات قد تعطل البناء برمجياً
           sed -i '/expo-web-browser/d' app.json || true
+          # توليد مجلد الأندرويد الخام
           npx expo prebuild --platform android --no-install
 
-      - name: 👻 Inject Soul (Generate Offline Bundle)
+      - name: 👻 Inject Soul (Expo Offline Bundle)
         run: |
-          # إنشاء مجلد الأصول إذا لم يكن موجوداً
+          # إنشاء مجلد الأصول (Assets) داخل هيكل الأندرويد
           mkdir -p android/app/src/main/assets
-          # تحويل كود الجافا سكريبت إلى ملف bundle ووضعه داخل الأندرويد
-          npx react-native bundle --platform android --dev false --entry-file index.js --bundle-output android/app/src/main/assets/index.android.bundle --assets-dest android/app/src/main/res
+          # توليد ملف الـ Bundle (الروح) وحقنه داخل التطبيق ليعمل بدون سيرفر
+          npx expo export:embed --platform android --dev false --dest android/app/src/main/assets
 
       - name: 🛠 Build with Fix
         run: |
           cd android
+          # إعطاء صلاحية التنفيذ لمحرك البناء
           chmod +x gradlew
+          # البدء في تجميع ملف الـ APK مع تفعيل أدوات التوافق
           ./gradlew assembleDebug -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true --no-daemon
 
       - name: 📥 Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SportZone-With-Soul
+          name: SportZone-With-Soul-Final
           path: android/app/build/outputs/apk/debug/app-debug.apk
           
