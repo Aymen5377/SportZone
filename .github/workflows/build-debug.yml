@@ -26,29 +26,39 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: ⚙️ Prebuild (Preparing Native Android)
+      - name: ⚙️ Prebuild
         run: |
           sed -i '/expo-web-browser/d' app.json || true
           npx expo prebuild --platform android --no-install
 
+      - name: 🚀 Optimize Memory & Paths
+        run: |
+          # زيادة ذاكرة Node.js لمنع فشل التجميع
+          export NODE_OPTIONS="--max-old-space-size=4096"
+          
+          # إخبار Gradle بمكان ملف الـ entry لضمان عدم ضياع "الروح"
+          cd android
+          echo "nodeExecutablePath=$(which node)" >> local.properties
+          
+          # إنشاء مجلد الأصول يدوياً للتأكد
+          mkdir -p app/src/main/assets
+
       - name: 🔑 Create Temporary Signing Key
         run: |
           cd android/app
-          # حذف أي مفتاح قديم إذا وجد لتجنب خطأ Alias already exists
           rm -f debug.keystore
-          # إنشاء مفتاح جديد باسم فريد
           keytool -genkey -v -keystore debug.keystore -storepass android -alias sportzone_key -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=SportZone,O=App,C=US"
 
-      - name: 🛠 Build Release APK (The Original Version)
+      - name: 🛠 Build Release APK (Final Fix)
         run: |
           cd android
           chmod +x gradlew
-          # بناء نسخة الـ Release
-          ./gradlew assembleRelease -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true --no-daemon
+          # تشغيل البناء مع رفع كفاءة الذاكرة لـ Gradle أيضاً
+          ./gradlew assembleRelease -Dorg.gradle.jvmargs="-Xmx4096m -XX:MaxMetaspaceSize=512m" -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true --no-daemon
 
       - name: 📥 Upload Original APK
         uses: actions/upload-artifact@v4
         with:
-          name: SportZone-Original-Release
+          name: SportZone-Final-Release
           path: android/app/build/outputs/apk/release/app-release-unsigned.apk
           
