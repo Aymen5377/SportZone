@@ -1,4 +1,4 @@
-name: Debug & Complete Remaining Tasks
+name: Finish Remaining Tasks Only
 on: [push]
 
 jobs:
@@ -8,33 +8,41 @@ jobs:
       - name: 🏗 Checkout Repository
         uses: actions/checkout@v4
 
-      # 1. استرجاع المكتبات (Dependencies) من الكاش
+      # 1. استرجاع المكتبات من الكاش (لن يحمل شيئاً من الإنترنت)
       - name: 📦 Restore Node Modules
         uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
 
-      # 2. استرجاع مجلد أندرويد وملفات Gradle (الـ 197 جزء المكتملة)
-      - name: ⚡ Restore Gradle & Android Cache
+      # 2. استرجاع مجلد أندرويد (الـ 197 جزء المكتملة)
+      - name: 📂 Restore Android Folder & Gradle
         uses: actions/cache@v4
+        id: android-cache
         with:
           path: |
+            android
             ~/.gradle/caches
             ~/.gradle/wrapper
-            android/.gradle
-            android/app/build
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          key: ${{ runner.os }}-android-gradle-final
 
-      # 3. محاولة إنهاء الـ 54 جزء المتبقية مع طبع الخطأ بالتفصيل
-      - name: 🛠️ Build Remaining Tasks & Debug
+      # 3. التأكد من وجود المجلد (حل مشكلة No such file or directory)
+      - name: 🛠️ Repair Android Structure
+        run: |
+          if [ ! -d "android" ]; then
+            echo "⚠️ المجلد مفقود من الكاش، جاري إعادة توليده سريعاً..."
+            npx expo prebuild --platform android --no-install
+          else
+            echo "✅ المجلد موجود، سنكمل من حيث توقفنا."
+          fi
+
+      # 4. تشغيل البناء للأجزاء المتبقية فقط وطباعة الخطأ
+      - name: 🏗️ Build Remaining (54 Tasks)
         working-directory: android
         run: |
           chmod +x gradlew
-          # أضفنا --stacktrace و --info لإظهار سبب المشكلة الحقيقي
           ./gradlew assembleRelease --build-cache \
           --stacktrace --info \
           -Dorg.gradle.jvmargs="-Xmx3072m" \
-          -Dorg.gradle.daemon=false \
           -x lint
           
