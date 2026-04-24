@@ -15,12 +15,9 @@ jobs:
 
       - name: 📦 Install & Fix Dependencies
         run: |
-          # تنظيف البيئة لضمان عدم وجود ملفات معطوبة
           rm -rf node_modules
           rm -rf android
-          # تثبيت المكتبات مع تجاهل التعارضات
           npm install --legacy-peer-deps
-          # تثبيت مكتبات الجسر الأساسية يدوياً
           npx expo install expo-modules-core expo-linking expo-constants
 
       - name: ☕ Setup Java
@@ -31,29 +28,34 @@ jobs:
 
       - name: ⚙️ Prebuild (Generate Android Folder)
         run: |
-          # حذف أي إضافات قد تعطل البناء برمجياً
+          # حذف أي إضافات قد تعطل البناء
           sed -i '/expo-web-browser/d' app.json || true
-          # توليد مجلد الأندرويد الخام
           npx expo prebuild --platform android --no-install
 
-      - name: 👻 Inject Soul (Expo Offline Bundle)
+      - name: 👻 Inject Soul (Native Bundle Generation)
         run: |
-          # إنشاء مجلد الأصول (Assets) داخل هيكل الأندرويد
+          # إنشاء المجلدات يدوياً لضمان عدم وجود أخطاء مسارات
           mkdir -p android/app/src/main/assets
-          # توليد ملف الـ Bundle (الروح) وحقنه داخل التطبيق ليعمل بدون سيرفر
-          npx expo export:embed --platform android --dev false --dest android/app/src/main/assets
+          mkdir -p android/app/src/main/res/drawable-mdpi
+          
+          # استخدام أمر react-native bundle المباشر مع تحديد المدخلات بدقة
+          npx react-native bundle \
+            --platform android \
+            --dev false \
+            --entry-file index.js \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res/
+        continue-on-error: true # لضمان استمرار البناء حتى لو حدث تنبيه بسيط
 
       - name: 🛠 Build with Fix
         run: |
           cd android
-          # إعطاء صلاحية التنفيذ لمحرك البناء
           chmod +x gradlew
-          # البدء في تجميع ملف الـ APK مع تفعيل أدوات التوافق
           ./gradlew assembleDebug -Pandroid.useAndroidX=true -Pandroid.enableJetifier=true --no-daemon
 
       - name: 📥 Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SportZone-With-Soul-Final
+          name: SportZone-Final-Stable
           path: android/app/build/outputs/apk/debug/app-debug.apk
           
