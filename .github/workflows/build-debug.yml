@@ -1,4 +1,4 @@
-name: Complete Remaining 54 Tasks
+name: Final Fix & Build APK
 on: [push]
 
 jobs:
@@ -13,54 +13,50 @@ jobs:
         with:
           node-version: 18
 
-      # 1️⃣ استرجاع "الخزنة" التي تحتوي على الـ 197 جزء المكتملة
-      - name: 📂 Universal Cache Restore
+      # 1️⃣ استرجاع الكاش (للحصول على ما تم بناؤه سابقاً)
+      - name: 📂 Restore Cache
         uses: actions/cache@v4
         with:
           path: |
-            node_modules
-            android
+            android/.gradle
+            android/app/build
             ~/.gradle/caches
-            ~/.gradle/wrapper
-          # نستخدم نفس المفتاح لضمان العودة لنفس نقطة الحفظ
-          key: ${{ runner.os }}-universal-cache-${{ hashFiles('**/package-lock.json', 'app.json') }}
-          restore-keys: |
-            ${{ runner.os }}-universal-cache-
+          key: ${{ runner.os }}-final-build-cache
 
-      # 2️⃣ التأكد من سلامة البيئة دون تحميل خارجي
-      - name: 🛠️ Environment Ready Check
+      # 2️⃣ إصلاح المكتبات التالفة (أهم خطوة)
+      # سنقوم بحذف المجلدات التي سببت الخطأ وإعادة تحميلها نظيفة
+      - name: 🛠️ Repair Dependencies
         run: |
-          if [ ! -d "node_modules/expo" ]; then
-            npm install expo --no-save
-          fi
-          if [ ! -d "android" ]; then
-            npx expo prebuild --platform android --no-install
-          fi
+          rm -rf node_modules
+          npm install --legacy-peer-deps
+          # التأكد من وجود أدوات Expo الأساسية
+          npx expo install --fix
 
-      # 3️⃣ استكمال الـ 54 مهمة المتبقية مع طباعة الخطأ فوراً
-      - name: 🏗️ Finish Remaining Tasks
+      # 3️⃣ إعادة توليد ملفات أندرويد لتتوافق مع المكتبات الجديدة
+      - name: 📂 Refresh Android Structure
+        run: |
+          rm -rf android
+          npx expo prebuild --platform android --no-install
+
+      # 4️⃣ البناء النهائي (الـ 54 جزء المتبقية)
+      - name: 🏗️ Build Remaining Tasks
         working-directory: android
         run: |
           chmod +x gradlew
-          
-          echo "⏳ يستكمل الآن من حيث توقف (المهام المتبقية)..."
-          
-          # استخدام --build-cache لإخبار Gradle باستخدام الـ 197 جزءاً المحفوظة
-          ./gradlew assembleRelease --build-cache \
-          --continue \
+          # استخدام Clean لتنظيف التضاربات السابقة في Gradle
+          ./gradlew clean assembleRelease --build-cache \
           -Dorg.gradle.jvmargs="-Xmx3072m" \
           -Dorg.gradle.daemon=false \
           || { 
-               echo "❌❌ توقف البناء! إليك سبب المشكلة في الأجزاء المتبقية: ❌❌";
-               ./gradlew assembleRelease --info | grep -E "error|FAILED" -A 3; 
-               exit 1; 
+               echo "❌ فشل البناء! التقرير النهائي:";
+               ./gradlew assembleRelease --stacktrace --info | grep "error:" -A 5;
+               exit 1;
              }
 
-      # 4️⃣ استخراج الـ APK فور النجاح
       - name: 📤 Upload SportZone APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: SportZone-Final-Build
+          name: SportZone-Final
           path: android/app/build/outputs/apk/release/*.apk
           
