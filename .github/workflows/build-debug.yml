@@ -1,4 +1,4 @@
-name: SportZone SSH via Ngrok
+name: SportZone SSH via Cloudflare
 on: [push, workflow_dispatch]
 
 jobs:
@@ -10,30 +10,22 @@ jobs:
 
       - name: Set SSH Password
         run: |
-          # تعيين كلمة سر بسيطة للدخول
           echo "runner:1234" | sudo chpasswd
 
-      - name: Install Ngrok & Setup
+      - name: Install Cloudflared
         run: |
-          # تحميل وتثبيت Ngrok
-          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null
-          echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list
-          sudo apt update && sudo apt install ngrok
-          
-          # استخدام التوكن الخاص بك مباشرة
-          ngrok config add-authtoken 3CpyQAkpEDXaGdmRT1v9Rha4QYz_4LunC9PrBX7ZsxmmbxKgL
+          curl -L --output cloudflared.deb https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared.deb
 
-      - name: Start SSH Tunnel
+      - name: Start Cloudflare Tunnel
         run: |
-          # تشغيل النفق على بورت SSH (22)
-          ngrok tcp 22 &
+          # تشغيل النفق وإظهار رابط الاتصال
+          cloudflared tunnel --url ssh://localhost:22 > cloudflare.log 2>&1 &
           sleep 10
-          # استخراج رابط الاتصال وإظهاره في الـ Logs
-          curl --silent http://127.0.0.1:4040/api/tunnels | jq '.tunnels[0].public_url'
+          grep -o 'https://[-0-9a-z]*\.trycloudflare.com' cloudflare.log | head -n 1
 
       - name: Keep Alive
         run: |
-          echo "السيرفر جاهز! انتظر ظهور الرابط في الأعلى واتصل من Termux."
-          # سيظل السيرفر مفتوحاً لمدة 6 ساعات أو حتى تغلقه يدوياً
+          echo "السيرفر جاهز! انسخ الرابط الذي ينتهي بـ .trycloudflare.com"
           sleep 21600
           
