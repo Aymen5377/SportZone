@@ -8,9 +8,14 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set SSH Password
+      - name: Configure SSH & Password
         run: |
+          # تعيين كلمة المرور للمستخدم runner
           echo "runner:1234" | sudo chpasswd
+          # تفعيل خدمة الـ SSH والسماح بالدخول بكلمة مرور
+          sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+          sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+          sudo service ssh restart
 
       - name: Install Cloudflared
         run: |
@@ -19,13 +24,15 @@ jobs:
 
       - name: Start Cloudflare Tunnel
         run: |
-          # تشغيل النفق وإظهار رابط الاتصال
+          # تشغيل النفق وربطه بـ SSH المحلي
           cloudflared tunnel --url ssh://localhost:22 > cloudflare.log 2>&1 &
-          sleep 10
+          sleep 15
+          echo "------------------------------------------------"
           grep -o 'https://[-0-9a-z]*\.trycloudflare.com' cloudflare.log | head -n 1
+          echo "------------------------------------------------"
 
       - name: Keep Alive
         run: |
-          echo "السيرفر جاهز! انسخ الرابط الذي ينتهي بـ .trycloudflare.com"
+          echo "السيرفر جاهز الآن! إذا لم يستجب SSH، تأكد من تحديث الرابط."
           sleep 21600
           
