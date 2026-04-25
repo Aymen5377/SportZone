@@ -1,23 +1,13 @@
-name: Remote SSH Terminal (Tmate)
-
-on: 
-  workflow_dispatch: # يسمح لك بتشغيل السيرفر يدوياً في أي وقت
+name: Connect Termux to Action
+on: [push, workflow_dispatch]
 
 jobs:
   connect:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Set up JDK 17 (أو نسخة جافا التي يحتاجها تطبيقك)
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-
+      - uses: actions/checkout@v4
+      
       - name: Setup Tmate Session
         uses: mxschmitt/action-tmate@v3
         with:
-          limit-access-to-user: ${{ github.actor }} # اختياري: لزيادة الأمان
-          
+          limit-access-to-user: ${{ github.actor }}
