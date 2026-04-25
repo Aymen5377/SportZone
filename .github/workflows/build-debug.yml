@@ -1,13 +1,21 @@
-name: Connect Termux to Action
+name: Connect Termux to Action (SportZone Edition)
 on: [push, workflow_dispatch]
 
 jobs:
   connect:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
       
+      - name: Install Network Tools
+        run: sudo apt-get update && sudo apt-get install -y openssh-client
+
       - name: Setup Tmate Session
         uses: mxschmitt/action-tmate@v3
         with:
+          # هذا الخيار يحد من الوصول إليك فقط لزيادة الأمان
           limit-access-to-user: ${{ github.actor }}
+          # إذا أردت تثبيت الجلسة حتى لو فشلت الخطوات الأخرى
+          install-dependencies: true
+          
